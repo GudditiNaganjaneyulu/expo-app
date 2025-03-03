@@ -3,8 +3,8 @@ name: EAS Build
 on:
   push:
     branches:
-      - main  # Adjust this branch according to your use case
-  workflow_dispatch:  # This allows you to manually trigger the workflow from GitHub Actions
+      - main
+  workflow_dispatch:  # Allows manual trigger
 
 jobs:
   eas-build:
@@ -25,12 +25,18 @@ jobs:
       - name: Install EAS CLI
         run: npm install -g eas-cli
 
-      - name: Authenticate with EAS
-        run: eas whoami
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
-
       - name: Run EAS Build
-        run: eas build --platform android --non-interactive --profile development
+        id: eas_build  # Add an ID so we can reference the result
+        run: eas build --platform android --non-interactive --profile production
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_PAT }}
+
+      - name: Notify Slack on success
+        if: success()  # Only runs if the previous steps succeeded
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{"text": "✅ EAS Build succeeded for *${{ github.repository }}* on branch *${{ github.ref_name }}*"}' ${{ secrets.SLACK_WEBHOOK }}
+
+      - name: Notify Slack on failure
+        if: failure()  # Only runs if the previous steps failed
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{"text": "❌ EAS Build failed for *${{ github.repository }}* on branch *${{ github.ref_name }}*"}' ${{ secrets.SLACK_WEBHOOK }}
