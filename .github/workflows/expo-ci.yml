@@ -1,0 +1,36 @@
+name: EAS Build
+
+on:
+  push:
+    branches:
+      - main  # Adjust this branch according to your use case
+  workflow_dispatch:  # This allows you to manually trigger the workflow from GitHub Actions
+
+jobs:
+  eas-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16.x'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Install EAS CLI
+        run: npm install -g eas-cli
+
+      - name: Authenticate with EAS
+        run: eas whoami
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Run EAS Build
+        run: eas build --platform android --non-interactive --profile development
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_PAT }}
