@@ -33,14 +33,12 @@ jobs:
       - name: 🚀 Build development profile
         run: eas build --platform android --non-interactive --profile development
 
-      - name: 🚀 Build staging profile
-        run: eas build --platform android --non-interactive --profile staging
-
-      - name: 🚀 Build testing profile
-        run: eas build --platform android --non-interactive --profile testing
-
-      - name: 🚀 Build production profile
-        run: eas build --platform android --non-interactive --profile production
+      - name: Generate Build Summary with Expo QR Code
+        run: |
+          echo "## EAS Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "### Development Profile" >> $GITHUB_STEP_SUMMARY
+          echo "![Expo QR](https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=exp://exp.host/@andreaslydemann/todo-app?release-channel=development)" >> $GITHUB_STEP_SUMMARY
+          echo "- Build URL: https://exp.host/@andreaslydemann/todo-app?release-channel=development" >> $GITHUB_STEP_SUMMARY
 
       - name: ✅ Notify Slack on success
         if: success()

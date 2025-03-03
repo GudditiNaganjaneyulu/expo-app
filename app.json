@@ -46,6 +46,12 @@
         "projectId": "713605bd-0ae5-4567-aa01-99796ab9fb9f"
       }
     },
-    "owner": "gudditinaganjaneyulu"
+    "owner": "gudditinaganjaneyulu",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/713605bd-0ae5-4567-aa01-99796ab9fb9f"
+    }
   }
 }
