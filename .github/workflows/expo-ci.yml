@@ -7,36 +7,47 @@ on:
   workflow_dispatch:  # Allows manual trigger
 
 jobs:
-  eas-build:
+  build:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+      - name: 🏗 Setup repo
+        uses: actions/checkout@v4
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
+      - name: 🏗 Setup Node
+        uses: actions/setup-node@v4
         with:
-          node-version: '16.x'
+          node-version: 20.x
+          cache: npm
 
-      - name: Install dependencies
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_PAT }}
+
+      - name: 📦 Install dependencies
         run: npm install
 
-      - name: Install EAS CLI
-        run: npm install -g eas-cli
+      - name: 🚀 Build development profile
+        run: eas build --platform android --non-interactive --profile development
 
-      - name: Run EAS Build
-        id: eas_build  # Add an ID so we can reference the result
+      - name: 🚀 Build staging profile
+        run: eas build --platform android --non-interactive --profile staging
+
+      - name: 🚀 Build testing profile
+        run: eas build --platform android --non-interactive --profile testing
+
+      - name: 🚀 Build production profile
         run: eas build --platform android --non-interactive --profile production
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_PAT }}
 
-      - name: Notify Slack on success
-        if: success()  # Only runs if the previous steps succeeded
+      - name: ✅ Notify Slack on success
+        if: success()
         run: |
           curl -X POST -H 'Content-type: application/json' --data '{"text": "✅ EAS Build succeeded for *${{ github.repository }}* on branch *${{ github.ref_name }}*"}' ${{ secrets.SLACK_WEBHOOK }}
 
-      - name: Notify Slack on failure
-        if: failure()  # Only runs if the previous steps failed
+      - name: ❌ Notify Slack on failure
+        if: failure()
         run: |
           curl -X POST -H 'Content-type: application/json' --data '{"text": "❌ EAS Build failed for *${{ github.repository }}* on branch *${{ github.ref_name }}*"}' ${{ secrets.SLACK_WEBHOOK }}

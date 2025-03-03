@@ -11,11 +11,24 @@
     "preview": {
       "distribution": "internal"
     },
-    "production": {
+    "staging": {
+      "developmentClient": false,
+      "distribution": "internal",
       "autoIncrement": true
+    },
+    "testing": {
+      "developmentClient": false,
+      "distribution": "internal",
+      "autoIncrement": true
+    },
+    "production": {
+      "autoIncrement": true,
+      "distribution": "store"
     }
   },
   "submit": {
-    "production": {}
+    "production": {},
+    "staging": {},
+    "testing": {}
   }
 }
