@@ -28,22 +28,18 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
-      - name: 🚀 Build development profile
-        run: eas update --auto
-
-      - name: Generate Build Summary with Expo QR Code
+      - name: 🚀 Build development profile and capture output
+        id: eas_build
         run: |
-          echo "## EAS Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "### Development Profile" >> $GITHUB_STEP_SUMMARY
-          echo "![Expo QR](https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=exp://exp.host/@andreaslydemann/todo-app?release-channel=development)" >> $GITHUB_STEP_SUMMARY
-          echo "- Build URL: https://exp.host/@andreaslydemann/todo-app?release-channel=development" >> $GITHUB_STEP_SUMMARY
+          output=$(eas update --auto)
+          echo "$output"
+          # Extract the URL from the output (assuming it's the first URL in the log)
+          url=$(echo "$output" | grep -oP 'https?://\S+')
+          echo "Build URL: $url"
+          echo "::set-output name=build_url::$url"
 
-      - name: ✅ Notify Slack on success
-        if: success()
+      - name: 🔗 Add build URL and QR code to workflow summary
         run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text": "✅ EAS Build succeeded for *${{ github.repository }}* on branch *${{ github.ref_name }}*"}' ${{ secrets.SLACK_WEBHOOK }}
-
-      - name: ❌ Notify Slack on failure
-        if: failure()
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text": "❌ EAS Build failed for *${{ github.repository }}* on branch *${{ github.ref_name }}*"}' ${{ secrets.SLACK_WEBHOOK }}
+          echo "### EAS Build Result" >> $GITHUB_STEP_SUMMARY
+          echo "[Build URL](${{ steps.eas_build.outputs.build_url }})" >> $GITHUB_STEP_SUMMARY
+          echo "![QR Code](https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${{ steps.eas_build.outputs.build_url }})" >> $GITHUB_STEP_SUMMARY
