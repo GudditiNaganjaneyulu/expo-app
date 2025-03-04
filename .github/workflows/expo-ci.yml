@@ -1,7 +1,6 @@
 name: eas build development
 on:
   push:
-
 jobs:
   build:
     runs-on: ubuntu-latest
