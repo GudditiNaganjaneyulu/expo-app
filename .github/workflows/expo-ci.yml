@@ -1,9 +1,7 @@
 name: EAS Build
 
 on:
-  push:
-    branches:
-      - main
+  pull_request:
   workflow_dispatch:  # Allows manual trigger
 
 jobs:
@@ -30,22 +28,34 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
-      - name: 🚀 Build development profile
-        run: eas build --platform android --non-interactive --profile development
-
-      - name: Generate Build Summary with Expo QR Code
+      - name: 🚀 Build development profile and capture output
+        id: eas_build
         run: |
-          echo "## EAS Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "### Development Profile" >> $GITHUB_STEP_SUMMARY
-          echo "![Expo QR](https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=exp://exp.host/@andreaslydemann/todo-app?release-channel=development)" >> $GITHUB_STEP_SUMMARY
-          echo "- Build URL: https://exp.host/@andreaslydemann/todo-app?release-channel=development" >> $GITHUB_STEP_SUMMARY
+          # Running EAS Update command and capturing output
+          output=$(eas update --auto)
+          echo "$output"
+          
+          # Extract the preview URL from the output (it starts with "https://exp.host/")
+          preview_url=$(echo "$output" | grep -oP 'https://exp.host/\S+')
 
-      - name: ✅ Notify Slack on success
-        if: success()
-        run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text": "✅ EAS Build succeeded for *${{ github.repository }}* on branch *${{ github.ref_name }}*"}' ${{ secrets.SLACK_WEBHOOK }}
+          # Extract the URL of the dashboard or the EAS build URL (assuming the first URL in the log)
+          build_url=$(echo "$output" | grep -oP 'https://expo.dev/accounts/\S+/projects/\S+/updates/\S+')
 
-      - name: ❌ Notify Slack on failure
-        if: failure()
+          # Output to GitHub Actions for later use
+          echo "Preview URL: $preview_url"
+          echo "Build URL: $build_url"
+
+          # Setting output for future steps
+          echo "::set-output name=preview_url::$preview_url"
+          echo "::set-output name=build_url::$build_url"
+
+      - name: 🔗 Add build and preview URL + QR codes to workflow summary
         run: |
-          curl -X POST -H 'Content-type: application/json' --data '{"text": "❌ EAS Build failed for *${{ github.repository }}* on branch *${{ github.ref_name }}*"}' ${{ secrets.SLACK_WEBHOOK }}
+          # Adding Build URL and Preview URL to the summary
+          echo "### EAS Build Result" >> $GITHUB_STEP_SUMMARY
+          echo "[Build URL](${{ steps.eas_build.outputs.build_url }})" >> $GITHUB_STEP_SUMMARY
+          echo "[Preview URL](${{ steps.eas_build.outputs.preview_url }})" >> $GITHUB_STEP_SUMMARY
+          
+          # Adding QR codes for both URLs to the summary
+          echo "![Build QR Code](https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${{ steps.eas_build.outputs.build_url }})" >> $GITHUB_STEP_SUMMARY
+          echo "![Preview QR Code](https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${{ steps.eas_build.outputs.preview_url }})" >> $GITHUB_STEP_SUMMARY
