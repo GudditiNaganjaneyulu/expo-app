@@ -5,8 +5,8 @@
   },
   "build": {
     "development": {
-      "developmentClient": true,
-      "distribution": "store"
+      "developmentClient": false,
+      "distribution": "internal"
       
     },
     "preview": {
