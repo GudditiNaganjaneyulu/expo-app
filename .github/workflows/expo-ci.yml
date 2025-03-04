@@ -1,8 +1,7 @@
 name: eas build development
 on:
   push:
-    branches:
-      - qa
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -27,8 +26,6 @@ jobs:
 
       - name: 🚀 Build app
         run: |
-          npm run prebuild
-          cp android/app/google-services.json android/app/src/release/google-services.json
           eas build --platform android --non-interactive --profile development > build_output.txt
 
       - name: Get build URL
