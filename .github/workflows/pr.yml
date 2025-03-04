@@ -12,12 +12,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      - name: 🏗 Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: npm
 
-      - name: Install EAS CLI
-        run: npm install -g eas-cli
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_PAT }}
 
-      - name: Authenticate with Expo
-        run: eas whoami || eas login --token ${{ secrets.EXPO_PAT }}
+      - name: 📦 Install dependencies
+        run: npm install
+
 
       - name: Publish preview update
         run: |
