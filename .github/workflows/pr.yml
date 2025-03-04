@@ -28,18 +28,7 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
-      - name: 🚀 Build development profile and capture output
-        id: eas_build
-        run: |
-          output=$(eas update --auto)
-          echo "$output"
-          # Extract the URL from the output (assuming it's the first URL in the log)
-          url=$(echo "$output" | grep -oP 'https?://\S+')
-          echo "Build URL: $url"
-          echo "::set-output name=build_url::$url"
-
-      - name: 🔗 Add build URL and QR code to workflow summary
-        run: |
-          echo "### EAS Build Result" >> $GITHUB_STEP_SUMMARY
-          echo "[Build URL](${{ steps.eas_build.outputs.build_url }})" >> $GITHUB_STEP_SUMMARY
-          echo "![QR Code](https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${{ steps.eas_build.outputs.build_url }})" >> $GITHUB_STEP_SUMMARY
+      - name: Create preview
+        uses: expo/expo-github-action/preview@v8
+        with:
+          command: eas update --auto
