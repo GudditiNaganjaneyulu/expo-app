@@ -25,24 +25,19 @@ jobs:
 
       - name: 🚀 Build app
         run: |
-          eas build --platform android --non-interactive --profile development > build_output.txt
+          eas build --platform android --non-interactive --profile development
+        id: eas_build
 
-      - name: Get build URL
+      - name: Send Slack Notification
+        if: success() || failure() # Send message regardless of build success/failure
         run: |
-          export BUILD_URL=$(grep -o 'https://expo.dev/accounts.*' build_output.txt)
-          echo "BUILD_URL=${BUILD_URL}" >> $GITHUB_ENV
+          STATUS="success"
+          if [ "${{ steps.eas_build.outcome }}" == "failure" ]; then
+            STATUS="failure"
+          fi
 
-      - name: 📄 Add build URL to summary
-        run: echo "Build URL: $BUILD_URL" >> $GITHUB_STEP_SUMMARY
-
-      - name: 📱 Generate QR Code
-        run: |
-          sudo apt-get install qrencode
-          qrencode -o qr.png "${{ env.BUILD_URL }}"
-          echo "![Build QR Code](qr.png)" >> $GITHUB_STEP_SUMMARY
-
-      - name: 📤 Upload QR Code
-        uses: actions/upload-artifact@v3
-        with:
-          name: build-qr-code
-          path: qr.png
+          curl -X POST -H 'Content-type: application/json' \
+          --data '{
+            "text": "EAS Build Status for *Development*:\n*Build Result*: '"$STATUS"' \nPlease check the details at https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds",
+            "channel": "#your-slack-channel"
+          }' ${{ secrets.SLACK_WEBHOOK }}
