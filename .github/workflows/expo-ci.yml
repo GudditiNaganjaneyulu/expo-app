@@ -25,31 +25,15 @@ jobs:
 
       - name: EAS Build
         id: eas_build
-        run: |
-          # Run EAS build with the development profile and capture the build ID
-          EAS_OUTPUT=$(eas build --platform android --non-interactive --profile development --output json)
-          BUILD_ID=$(echo $EAS_OUTPUT | jq -r '.id')
-          BUILD_URL="https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds/$BUILD_ID"
-          QR_CODE_URL="https://api.qrserver.com/v1/create-qr-code/?data=$BUILD_URL&size=300x300"
-          echo "BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
-          echo "BUILD_URL=$BUILD_URL" >> $GITHUB_ENV
-          echo "QR_CODE_URL=$QR_CODE_URL" >> $GITHUB_ENV
+        run: eas build --platform android --non-interactive --profile development
 
-      - name: 🟢 Send Slack message on success
-        if: success()
+      - name: 🗂 Download APK file
         run: |
-          MESSAGE="🤖 Open this link on your Android devices (or scan the QR code) to install the app:\n<$BUILD_URL>\n\nQR Code:\n$QR_CODE_URL"
-          curl -X POST -H 'Content-type: application/json' \
-            --data '{
-              "text": "'"$MESSAGE"'"
-            }' ${{ secrets.SLACK_WEBHOOK }}
+          mkdir -p artifacts
+          eas build:download --platform android --path artifacts/
 
-      # Notify on failure
-      - name: 🔴 Send Slack message on failure
-        if: failure()
-        run: |
-          MESSAGE="Build failed for the project \`${{ secrets.EXPO_PROJECT_NAME }}\`! Please check the details at https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds"
-          curl -X POST -H 'Content-type: application/json' \
-            --data '{
-              "text": "'"$MESSAGE"'"
-            }' ${{ secrets.SLACK_WEBHOOK }}
+      - name: 📦 Upload APK as artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: android-apk
+          path: artifacts/*.apk
