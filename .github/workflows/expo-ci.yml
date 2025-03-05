@@ -1,6 +1,10 @@
 name: eas build development
+
 on:
   push:
+    branches:
+      - main  # or specify the branches you want this to run on
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -29,5 +33,33 @@ jobs:
 
       - name: EAS Build
         id: eas_build
-        run: eas build --platform android --non-interactive --profile development
+        run: |
+          build_id=$(eas build --platform android --non-interactive --profile development | grep -oP '(?<=Build ID: )\S+')
+          echo "build_id=$build_id" >> $GITHUB_ENV
+          echo "Build ID: $build_id"  # This will print the build ID in the logs
 
+      - name: Wait for EAS build to finish
+        id: wait_for_build
+        run: |
+          while true; do
+            status=$(curl -s -X GET https://expo.dev/api/v2/builds/$build_id -H "Authorization: Bearer ${{ secrets.EXPO_PAT }}" | jq -r '.data.status')
+            if [[ "$status" == "finished" || "$status" == "errored" ]]; then
+              echo "Build finished with status: $status"
+              break
+            fi
+            echo "Waiting for the build to finish..."
+            sleep 30
+          done
+
+      - name: Display Build Details in Workflow Summary
+        run: |
+          build_url="https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds/$build_id"
+          echo "## EAS Build Details" >> $GITHUB_ENV
+          echo "Build ID: $build_id" >> $GITHUB_ENV
+          echo "Build URL: $build_url" >> $GITHUB_ENV
+
+      - name: Show Build Details in Summary
+        run: |
+          echo "EAS Build ID: ${{ env.build_id }}"
+          echo "EAS Build URL: ${{ env.build_url }}"
+        continue-on-error: true
