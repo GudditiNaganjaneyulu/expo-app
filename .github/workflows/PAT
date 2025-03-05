@@ -1,68 +1,28 @@
 name: eas build development
-
 on:
   push:
-    branches:
-      - main  # Or your desired branch
-
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      # Step 1: Checkout code from the repository
       - name: 🏗 Setup repo
         uses: actions/checkout@v3
 
-      # Step 2: Set up Node.js
       - name: 🏗 Setup Node
         uses: actions/setup-node@v3
         with:
           node-version: 18.x
           cache: npm
 
-      # Step 3: Set up EAS CLI
       - name: 🏗 Setup EAS
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_PAT }}
 
-      # Step 4: Build the APK file using EAS
-      - name: Publish update
-        id: generating_apk
-        run: eas build --profile development --platform android --non-interactive --local --output=./app-development.apk
+      - name: 📦 Install dependencies
+        run: npm install
 
-      # Step 5: Create a release on GitHub
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
-        with:
-          tag_name: ${{ github.run_number }}
-          release_name: Release ${{ github.run_number }}
-          prerelease: true
-
-      # Step 6: Upload the APK file as a release asset
-      - name: Upload Release Asset
-        id: upload-release-asset
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.PAT }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./app-development.apk
-          asset_name: app-development.apk
-          asset_content_type: application/vnd.android.package-archive
-
-      # Step 7: Generate a QR code for the APK download URL
-      - name: Generating QR code
-        id: generating_qr_code
-        uses: kentaro-m/qr-code-commenter-action@v0.1.2
-        with:
-          repo-token: "${{ secrets.PAT }}"
-          content: https://github.com/<GITHUB_USERNAME>/<GITHUB_REPO_NAME>/releases/download/${{ github.run_number }}/app-development.apk
-          comment: |
-            :lock: This is a QR code for access to the development APK. :iphone: Scan the code with your device.
-            {qrcode}
+      - name: EAS Build
+        id: eas_build
+        run: eas update --platform android
