@@ -26,7 +26,25 @@ jobs:
       - name: EAS Build
         id: eas_build
         run: |
-          eas build --platform android --non-interactive --output build-id.txt
+          # Run EAS build with the development profile
+          eas build --platform android --non-interactive --profile development --json > eas_build_output.json
+          
+          # Extract the build ID from the JSON output
+          BUILD_ID=$(cat eas_build_output.json | jq -r '.id')
+
+          # Save build ID as output
+          echo "BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
+
+      - name: Extract Installation Link
+        id: extract_link
+        run: |
+          ACCOUNT_NAME=${{ secrets.EXPO_ACCOUNT_NAME }}
+          PROJECT_NAME=${{ secrets.EXPO_PROJECT_NAME }}
+          BUILD_ID=${{ env.BUILD_ID }}
+          INSTALL_LINK="https://expo.dev/accounts/${ACCOUNT_NAME}/projects/${PROJECT_NAME}/builds/${BUILD_ID}"
+
+          # Save the installation link
+          echo "INSTALL_LINK=$INSTALL_LINK" >> $GITHUB_ENV
 
       - name: Send Slack Notification
         if: success() || failure() # Send message regardless of build success/failure
@@ -36,10 +54,11 @@ jobs:
             STATUS="failure"
           fi
 
-          # Get the build ID from the output file
-          BUILD_ID=$(cat build-id.txt)
+          # Use the extracted installation link
+          INSTALL_LINK=${{ env.INSTALL_LINK }}
 
           curl -X POST -H 'Content-type: application/json' \
           --data '{
-            "text": "EAS Build Status for *Development*:\n*Build Result*: '"$STATUS"'\nBuild ID: '"$BUILD_ID"'\nPlease check the details at https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds/'"$BUILD_ID"'"
+            "text": "EAS Build Status for *Development*:\n*Build Result*: '"$STATUS"'\nInstall the app using this link: '"$INSTALL_LINK"'\n(You can open this link on your Android device or scan the QR code).",
+            "channel": "#your-slack-channel"
           }' ${{ secrets.SLACK_WEBHOOK }}
