@@ -26,29 +26,26 @@ jobs:
       - name: EAS Build
         id: eas_build
         run: |
-          # Run EAS build with the development profile
-          eas build --platform android --non-interactive --profile development --output json > build-output.json
-          
+          # Run EAS build with the development profile and capture the build ID
+          EAS_OUTPUT=$(eas build --platform android --non-interactive --profile development --output json)
+          BUILD_ID=$(echo $EAS_OUTPUT | jq -r '.id')
+          echo "BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
+
       - name: 🟢 Send Slack message on success
         if: success()
         run: |
-          BUILD_ID=$(cat build-output.json | jq -r '.id')
-          BUILD_URL="https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds/$BUILD_ID"
-          INSTALL_URL=$(cat build-output.json | jq -r '.artifacts.buildUrl')
-          QR_CODE="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=$INSTALL_URL"
-          
-          MESSAGE="Build succeeded for the project \`${{ secrets.EXPO_PROJECT_NAME }}\`! :white_check_mark:\nBuild URL: $BUILD_URL\nInstall via EAS: $INSTALL_URL\nQR Code: $QR_CODE"
-          
+          MESSAGE="🤖 Open this link on your Android devices (or scan the QR code) to install the app:\nhttps://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds/${{ env.BUILD_ID }}"
           curl -X POST -H 'Content-type: application/json' \
             --data '{
               "text": "'"$MESSAGE"'"
             }' ${{ secrets.SLACK_WEBHOOK }}
 
+      # Notify on failure
       - name: 🔴 Send Slack message on failure
         if: failure()
         run: |
-          MESSAGE="Build failed for the project \`${{ secrets.EXPO_PROJECT_NAME }}\`! :x:\nPlease check the details at https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds"
+          MESSAGE="Build failed for the project \`${{ secrets.EXPO_PROJECT_NAME }}\`!"
           curl -X POST -H 'Content-type: application/json' \
             --data '{
-              "text": "'"$MESSAGE"'"
+              "text": "'"$MESSAGE"' \nPlease check the details at https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds"
             }' ${{ secrets.SLACK_WEBHOOK }}
