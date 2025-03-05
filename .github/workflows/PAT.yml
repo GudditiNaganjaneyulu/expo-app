@@ -1,4 +1,4 @@
-name: eas build development
+name: eas auto update
 on:
   push:
 jobs:
