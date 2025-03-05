@@ -23,10 +23,10 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
-      - name: 🚀 Build app
-        run: |
-          eas build --platform android --non-interactive --profile development
+      - name: EAS Build
         id: eas_build
+        run: |
+          eas build --platform android --non-interactive --output build-id.txt
 
       - name: Send Slack Notification
         if: success() || failure() # Send message regardless of build success/failure
@@ -36,8 +36,10 @@ jobs:
             STATUS="failure"
           fi
 
+          # Get the build ID from the output file
+          BUILD_ID=$(cat build-id.txt)
+
           curl -X POST -H 'Content-type: application/json' \
           --data '{
-            "text": "EAS Build Status for *Development*:\n*Build Result*: '"$STATUS"' \nPlease check the details at https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds",
-            "channel": "#your-slack-channel"
+            "text": "EAS Build Status for *Development*:\n*Build Result*: '"$STATUS"'\nBuild ID: '"$BUILD_ID"'\nPlease check the details at https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds/'"$BUILD_ID"'"
           }' ${{ secrets.SLACK_WEBHOOK }}
