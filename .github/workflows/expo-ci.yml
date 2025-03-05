@@ -29,21 +29,21 @@ jobs:
       #     # Run EAS build with the development profile
       #     eas build --platform android --non-interactive --profile development 
 
-      - name: Send Slack Notification
-        if: success() || failure()  # Send message regardless of build success/failure
+      - name: 🟢 Send Slack message on success
+        if: success()
         run: |
-          STATUS="success"
-      
-          # Check if the build outcome was a failure
-          if [ "${{ steps.eas_build.outcome }}" == "failure" ]; then
-            STATUS="failure"
-          fi
-      
-          # Extract the branch name from GITHUB_REF (e.g., refs/heads/main -> main)
-          BRANCH_NAME=${GITHUB_REF#refs/heads/}
-      
-          # Send the Slack notification with the build status and branch name
+          MESSAGE="Build succeeded for the project \`${{ secrets.EXPO_PROJECT_NAME }}\`!"
           curl -X POST -H 'Content-type: application/json' \
             --data '{
-              "text": "*Build Result*: '"$STATUS"' \n*Branch*: '"$BRANCH_NAME"' \nPlease check the details at https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds"
+              "text": "'"$MESSAGE"' \nPlease check the details at https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds"
+            }' ${{ secrets.SLACK_WEBHOOK }}
+
+      # Notify on failure
+      - name: 🔴 Send Slack message on failure
+        if: failure()
+        run: |
+          MESSAGE="Build failed for the project \`${{ secrets.EXPO_PROJECT_NAME }}\`!"
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "text": "'"$MESSAGE"' \nPlease check the details at https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds"
             }' ${{ secrets.SLACK_WEBHOOK }}
