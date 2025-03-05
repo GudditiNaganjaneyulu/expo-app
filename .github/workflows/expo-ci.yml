@@ -5,53 +5,51 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # - name: 🏗 Setup repo
-      #   uses: actions/checkout@v3
+      - name: 🏗 Setup repo
+        uses: actions/checkout@v3
 
-      # - name: 🏗 Setup Node
-      #   uses: actions/setup-node@v3
-      #   with:
-      #     node-version: 18.x
-      #     cache: npm
+      - name: 🏗 Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+          cache: npm
 
-      # - name: 🏗 Setup EAS
-      #   uses: expo/expo-github-action@v8
-      #   with:
-      #     eas-version: latest
-      #     token: ${{ secrets.EXPO_PAT }}
+      - name: 🏗 Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_PAT }}
 
-      # - name: 📦 Install dependencies
-      #   run: npm install
+      - name: 📦 Install dependencies
+        run: npm install
 
-      # - name: EAS Build
-      #   id: eas_build
-      #   run: |
-      #     # Run EAS build with the development profile and capture the build ID
-      #     EAS_OUTPUT=$(eas build --platform android --non-interactive --profile development --output json)
-      #     BUILD_ID=$(echo $EAS_OUTPUT | jq -r '.id')
-      #     echo "BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
-
-      # - name: 🟢 Send Slack message on success
-      #   if: success()
-      #   run: |
-      #     MESSAGE="🤖 Open this link on your Android devices (or scan the QR code) to install the app:\nhttps://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds/${{ env.BUILD_ID }}"
-      #     curl -X POST -H 'Content-type: application/json' \
-      #       --data '{
-      #         "text": "'"$MESSAGE"'"
-      #       }' ${{ secrets.SLACK_WEBHOOK }}
-
-      # # Notify on failure
-      # - name: 🔴 Send Slack message on failure
-      #   if: failure()
-      #   run: |
-      #     MESSAGE="Build failed for the project \`${{ secrets.EXPO_PROJECT_NAME }}\`!"
-      #     curl -X POST -H 'Content-type: application/json' \
-      #       --data '{
-      #         "text": "'"$MESSAGE"' \nPlease check the details at https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds"
-      #       }' ${{ secrets.SLACK_WEBHOOK }}
-      - name: Get EAS Build ID via API
-        id: get_build_id
+      - name: EAS Build
+        id: eas_build
         run: |
-          BUILD_RESPONSE=$(curl -H "Authorization: Bearer ${{ secrets.EXPO_PAT }}" https://api.expo.dev/v2/projects/${{ secrets.EXPO_PROJECT_ID }}/builds?status=finished)
-          BUILD_ID=$(echo $BUILD_RESPONSE | jq -r '.data[0].id')
+          # Run EAS build with the development profile and capture the build ID
+          EAS_OUTPUT=$(eas build --platform android --non-interactive --profile development --output json)
+          BUILD_ID=$(echo $EAS_OUTPUT | jq -r '.id')
+          BUILD_URL="https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds/$BUILD_ID"
+          QR_CODE_URL="https://api.qrserver.com/v1/create-qr-code/?data=$BUILD_URL&size=300x300"
           echo "BUILD_ID=$BUILD_ID" >> $GITHUB_ENV
+          echo "BUILD_URL=$BUILD_URL" >> $GITHUB_ENV
+          echo "QR_CODE_URL=$QR_CODE_URL" >> $GITHUB_ENV
+
+      - name: 🟢 Send Slack message on success
+        if: success()
+        run: |
+          MESSAGE="🤖 Open this link on your Android devices (or scan the QR code) to install the app:\n<$BUILD_URL>\n\nQR Code:\n$QR_CODE_URL"
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "text": "'"$MESSAGE"'"
+            }' ${{ secrets.SLACK_WEBHOOK }}
+
+      # Notify on failure
+      - name: 🔴 Send Slack message on failure
+        if: failure()
+        run: |
+          MESSAGE="Build failed for the project \`${{ secrets.EXPO_PROJECT_NAME }}\`! Please check the details at https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds"
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "text": "'"$MESSAGE"'"
+            }' ${{ secrets.SLACK_WEBHOOK }}
