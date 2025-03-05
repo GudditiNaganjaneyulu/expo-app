@@ -31,13 +31,3 @@ jobs:
         id: eas_build
         run: eas build --platform android --non-interactive --profile development
 
-      - name: 🗂 Download APK file
-        run: |
-          mkdir -p artifacts
-          eas build:download --platform android --path artifacts/
-
-      - name: 📦 Upload APK as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: android-apk
-          path: artifacts/*.apk
