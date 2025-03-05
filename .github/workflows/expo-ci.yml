@@ -5,45 +5,50 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      # - name: 🏗 Setup repo
-      #   uses: actions/checkout@v3
+      - name: 🏗 Setup repo
+        uses: actions/checkout@v3
 
-      # - name: 🏗 Setup Node
-      #   uses: actions/setup-node@v3
-      #   with:
-      #     node-version: 18.x
-      #     cache: npm
+      - name: 🏗 Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+          cache: npm
 
-      # - name: 🏗 Setup EAS
-      #   uses: expo/expo-github-action@v8
-      #   with:
-      #     eas-version: latest
-      #     token: ${{ secrets.EXPO_PAT }}
+      - name: 🏗 Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_PAT }}
 
-      # - name: 📦 Install dependencies
-      #   run: npm install
+      - name: 📦 Install dependencies
+        run: npm install
 
-      # - name: EAS Build
-      #   id: eas_build
-      #   run: |
-      #     # Run EAS build with the development profile
-      #     eas build --platform android --non-interactive --profile development 
-
+      - name: EAS Build
+        id: eas_build
+        run: |
+          # Run EAS build with the development profile
+          eas build --platform android --non-interactive --profile development --output json > build-output.json
+          
       - name: 🟢 Send Slack message on success
         if: success()
         run: |
-          MESSAGE="Build succeeded for the project \`${{ secrets.EXPO_PROJECT_NAME }}\`!"
+          BUILD_ID=$(cat build-output.json | jq -r '.id')
+          BUILD_URL="https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds/$BUILD_ID"
+          INSTALL_URL=$(cat build-output.json | jq -r '.artifacts.buildUrl')
+          QR_CODE="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=$INSTALL_URL"
+          
+          MESSAGE="Build succeeded for the project \`${{ secrets.EXPO_PROJECT_NAME }}\`! :white_check_mark:\nBuild URL: $BUILD_URL\nInstall via EAS: $INSTALL_URL\nQR Code: $QR_CODE"
+          
           curl -X POST -H 'Content-type: application/json' \
             --data '{
-              "text": "'"$MESSAGE"' \nPlease check the details at https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds"
+              "text": "'"$MESSAGE"'"
             }' ${{ secrets.SLACK_WEBHOOK }}
 
-      # Notify on failure
       - name: 🔴 Send Slack message on failure
         if: failure()
         run: |
-          MESSAGE="Build failed for the project \`${{ secrets.EXPO_PROJECT_NAME }}\`!"
+          MESSAGE="Build failed for the project \`${{ secrets.EXPO_PROJECT_NAME }}\`! :x:\nPlease check the details at https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds"
           curl -X POST -H 'Content-type: application/json' \
             --data '{
-              "text": "'"$MESSAGE"' \nPlease check the details at https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds"
+              "text": "'"$MESSAGE"'"
             }' ${{ secrets.SLACK_WEBHOOK }}
