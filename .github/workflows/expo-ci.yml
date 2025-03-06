@@ -2,9 +2,9 @@ name: eas build development
 
 on:
   push:
-    branches:
-      - qa
-      - QR-Changes-for-Slack-Notification
+    # branches:
+    #   - qa
+    #   - QR-Changes-for-Slack-Notification
   workflow_dispatch:
 
 jobs:
