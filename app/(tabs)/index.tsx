@@ -1,11 +1,18 @@
-import { Image, StyleSheet, Platform } from 'react-native';
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
+import React, { useState } from 'react';
+import { View, TextInput, Button, StyleSheet, Image } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+import ParallaxScrollView from '@/components/ParallaxScrollView';
 
-export default function HomeScreen() {
+export default function AuthScreen() {
+  const [isRegister, setIsRegister] = useState(true);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+
+  const handleAuth = () => {
+    console.log(isRegister ? 'Registering' : 'Logging in', { email, password });
+  };
+
   return (
     <ParallaxScrollView
       headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
@@ -14,42 +21,45 @@ export default function HomeScreen() {
           source={require('@/assets/images/partial-react-logo.png')}
           style={styles.reactLogo}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome to Our App!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Get Started</ThemedText>
-        <ThemedText>
-          Discover the features of our app. Feel free to explore and customize as needed.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Dive In</ThemedText>
-        <ThemedText>
-          Check out the Explore tab to see what's possible. Enjoy navigating through the content!
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Customize</ThemedText>
-        <ThemedText>
-          Need to change things up? You can modify the app as you like and make it your own!
-        </ThemedText>
+      }
+    >
+      <ThemedView style={styles.container}>
+        <ThemedText type="title">{isRegister ? 'Register' : 'Login'}</ThemedText>
+        <TextInput
+          style={styles.input}
+          placeholder="Email"
+          keyboardType="email-address"
+          value={email}
+          onChangeText={setEmail}
+        />
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          secureTextEntry
+          value={password}
+          onChangeText={setPassword}
+        />
+        <Button title={isRegister ? 'Register' : 'Login'} onPress={handleAuth} />
+        <Button
+          title={isRegister ? 'Switch to Login' : 'Switch to Register'}
+          onPress={() => setIsRegister(!isRegister)}
+        />
       </ThemedView>
     </ParallaxScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    padding: 16,
+    gap: 12,
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  input: {
+    height: 40,
+    borderColor: 'gray',
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 10,
   },
   reactLogo: {
     height: 178,
