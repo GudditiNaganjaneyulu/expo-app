@@ -71,20 +71,20 @@ jobs:
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: |
-          MESSAGE="🚀 Build Succeeded for the Project \`${{ secrets.EXPO_PROJECT_NAME }}\`!"
-          DETAILS="🔗 *Build URL:* <$build_url|Click to View Build>\n🤖 *APK Download:* <$apk_url|Download APK>"
+          MESSAGE="*\ud83d\ude80 Build Succeeded for the Project \`${{ secrets.EXPO_PROJECT_NAME }}\`!*"
+          DETAILS="\n\ud83d\udd17 *Build URL:* <$build_url|Click to View Build>\n\ud83e\udd16 *APK Download:* <$apk_url|Download APK>"
+          
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "text": "'"$MESSAGE"'\n\n'"$DETAILS"'",
+              "attachments": [
+                {
+                  "text": "\ud83d\udcf7 *Scan QR Code to Access Build:*",
+                  "image_url": "'"$qr_code_url"'"
+                }
+              ]
+            }' $SLACK_WEBHOOK
 
-          PAYLOAD=$(jq -n --arg message "$MESSAGE" --arg details "$DETAILS" --arg qr "$qr_code_url" '{
-            text: "\($message)\n\($details)",
-            attachments: [
-              {
-                text: "🖼️ *Scan QR Code to Access Build:*",
-                image_url: $qr
-              }
-            ]
-          }')
-
-          curl -X POST -H 'Content-type: application/json' --data "$PAYLOAD" $SLACK_WEBHOOK
 
       - name: 🔴 Send Slack message on failure
         if: failure()
