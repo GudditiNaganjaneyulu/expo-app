@@ -2,6 +2,7 @@ name: EAS Build for Playstore Format
 
 on:
   push:
+  workflow_dispatch:
 
 jobs:
   build:
