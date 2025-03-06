@@ -1,13 +1,15 @@
-name: eas build development
+name: EAS Build Development
+
 on:
   push:
+
 jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: read
-    
+
     steps:
       - name: 🏗 Setup repo
         uses: actions/checkout@v3
@@ -27,55 +29,70 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
-      - name: 🚀 EAS Build
+      - name: 🏗 Start EAS Build
         id: eas_build
         run: |
           build_json=$(eas build --platform android --non-interactive --profile development --json)
           echo "Build JSON: $build_json"
           
-          build_id=$(echo "$build_json" | jq -r '.[0].id')
-          apk_url=$(echo "$build_json" | jq -r '.[0].artifacts.applicationArchiveUrl')
-
+          build_id=$(echo $build_json | jq -r '.id')
+          apk_url=$(echo $build_json | jq -r '.artifacts.applicationArchiveUrl')
           build_url="https://expo.dev/accounts/gudditinaganjaneyulu/projects/expo-project/builds/$build_id"
           qr_code_url="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=$build_url"
 
           echo "build_id=$build_id" >> $GITHUB_ENV
-          echo "build_url=$build_url" >> $GITHUB_ENV
           echo "apk_url=$apk_url" >> $GITHUB_ENV
+          echo "build_url=$build_url" >> $GITHUB_ENV
           echo "qr_code_url=$qr_code_url" >> $GITHUB_ENV
 
-      - name: 📜 Add Build Summary
+      - name: 📌 Add Build Summary
         run: |
-          echo "## 🚀 Build Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Build URL**: [$build_url]($build_url)" >> $GITHUB_STEP_SUMMARY
-          echo "- **Direct APK URL**: [$apk_url]($apk_url)" >> $GITHUB_STEP_SUMMARY
-          echo "- **QR Code:**" >> $GITHUB_STEP_SUMMARY
-          echo "![$build_url]($qr_code_url)" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 EAS Build Completed! ✅" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**🔗 Build URL:** [Click to View Build]($build_url)" >> $GITHUB_STEP_SUMMARY
+          echo "**🤖 APK Download:** [Download APK]($apk_url)" >> $GITHUB_STEP_SUMMARY
+          echo "![QR Code]($qr_code_url)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "_Build completed on $(date)_" >> $GITHUB_STEP_SUMMARY
 
       - name: 🔔 Send Notification to Slack
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: |
           curl -X POST -H 'Content-type: application/json' --data '{
-            "text": "🚀 *EAS Build Completed!*",
-            "attachments": [
+            "blocks": [
               {
-                "color": "#36a64f",
+                "type": "header",
+                "text": {
+                  "type": "plain_text",
+                  "text": "🚀 EAS Build Completed! ✅",
+                  "emoji": true
+                }
+              },
+              {
+                "type": "section",
                 "fields": [
                   {
-                    "title": "Build URL",
-                    "value": "'$build_url'",
-                    "short": false
+                    "type": "mrkdwn",
+                    "text": "*🔗 Build URL:*\n<$build_url|Click here to view the build>"
                   },
                   {
-                    "title": "Direct APK URL",
-                    "value": "'$apk_url'",
-                    "short": false
-                  },
+                    "type": "mrkdwn",
+                    "text": "*🤖 APK Download:*\n<$apk_url|Download APK>"
+                  }
+                ]
+              },
+              {
+                "type": "image",
+                "image_url": "$qr_code_url",
+                "alt_text": "QR Code for Build"
+              },
+              {
+                "type": "context",
+                "elements": [
                   {
-                    "title": "QR Code",
-                    "value": "'$qr_code_url'",
-                    "short": false
+                    "type": "mrkdwn",
+                    "text": "📅 Build completed on $(date)"
                   }
                 ]
               }
