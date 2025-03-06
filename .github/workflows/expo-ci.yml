@@ -1,45 +1,56 @@
-name: EAS Build Development
+name: eas build development
 
 on:
   push:
+    branches:
+      - qa
+      - QR-Changes-for-Slack-Notification
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
-
     steps:
-      - name: 🏷 Setup repo
+      - name: 🏷️ Setup repo
         uses: actions/checkout@v3
 
-      - name: 🏷 Setup Node
+      - name: 🏷️ Setup Node
         uses: actions/setup-node@v3
         with:
           node-version: 18.x
-          cache: npm
+          cache: yarn
 
-      - name: 🏷 Setup EAS
+      - name: 🏷️ Setup EAS
         uses: expo/expo-github-action@v8
         with:
           eas-version: latest
           token: ${{ secrets.EXPO_PAT }}
 
-      - name: 📞 Install dependencies
-        run: npm install
+      - name: 🛆 Install dependencies
+        run: yarn install
 
-      - name: 🏷 Start EAS Build
+      - name: 🚀 Build app
         id: eas_build
         run: |
+          # npm run prebuild
+          # mkdir -p android/app/src/Release && touch android/app/src/Release/google-services.json
+          # mkdir -p android/app/src/release && touch android/app/src/release/google-services.json
+
+          # cp android/app/google-services.json android/app/src/Release/google-services.json
+          # cp android/app/google-services.json android/app/src/release/google-services.json
+          # cp android/app/google-services.json android/app/src/debug/google-services.json
+          # ls -ltr android/app
+          # ls -ltr android/app/src/Release
+          # ls -tr ios/ycapp
+          
           build_json=$(eas build --platform android --non-interactive --profile development --json)
           echo "Build JSON: $build_json"
           
-          build_id=$(echo $build_json | jq -r '.[0].id')
-          apk_url=$(echo $build_json | jq -r '.[0].artifacts.applicationArchiveUrl')
+          build_id=$(echo "$build_json" | jq -r '.[0].id')
+          apk_url=$(echo "$build_json" | jq -r '.[0].artifacts.applicationArchiveUrl')
           build_url="https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds/$build_id"
           qr_code_url="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=$build_url"
-
+          
           echo "build_id=$build_id" >> $GITHUB_ENV
           echo "apk_url=$apk_url" >> $GITHUB_ENV
           echo "build_url=$build_url" >> $GITHUB_ENV
@@ -60,16 +71,31 @@ jobs:
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: |
-          MESSAGE="*\ud83d\ude80 Build Succeeded for the Project \`${{ secrets.EXPO_PROJECT_NAME }}\`!*"
-          DETAILS="\ud83d\udd17 *Build URL:* <$build_url|Click to View Build>\n\ud83e\udd16 *APK Download:* <$apk_url|Download APK>"
+          MESSAGE="🚀 Build Succeeded for the Project \`${{ secrets.EXPO_PROJECT_NAME }}\`!"
+          DETAILS="🔗 *Build URL:* <$build_url|Click to View Build>\n🤖 *APK Download:* <$apk_url|Download APK>"
 
-          curl -X POST -H 'Content-type: application/json' \
-            --data '{
-              "text": "'"$MESSAGE"'\n'"$DETAILS"'",
-              "attachments": [
-                {
-                  "text": "\ud83d\udcf7 *Scan QR Code to Access Build:*",
-                  "image_url": "'"$qr_code_url"'"
-                }
-              ]
-            }' $SLACK_WEBHOOK
+          PAYLOAD=$(jq -n --arg message "$MESSAGE" --arg details "$DETAILS" --arg qr "$qr_code_url" '{
+            text: "\($message)\n\($details)",
+            attachments: [
+              {
+                text: "🖼️ *Scan QR Code to Access Build:*",
+                image_url: $qr
+              }
+            ]
+          }')
+
+          curl -X POST -H 'Content-type: application/json' --data "$PAYLOAD" $SLACK_WEBHOOK
+
+      - name: 🔴 Send Slack message on failure
+        if: failure()
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          MESSAGE="📉 Build Failed for the Project \`${{ secrets.EXPO_PROJECT_NAME }}\`!"
+          DETAILS="🔗 *Build URL:* <$build_url|Click to View Build>"
+
+          PAYLOAD=$(jq -n --arg message "$MESSAGE" --arg details "$DETAILS" '{
+            text: "\($message)\n\($details)"
+          }')
+
+          curl -X POST -H 'Content-type: application/json' --data "$PAYLOAD" $SLACK_WEBHOOK
