@@ -1,10 +1,6 @@
 name: eas build development
-
 on:
   push:
-    branches:
-      - main  # or specify the branches you want this to run on
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -31,35 +27,20 @@ jobs:
       - name: 📦 Install dependencies
         run: npm install
 
-      - name: EAS Build
+      - name: 🚀 EAS Build
         id: eas_build
         run: |
-          build_id=$(eas build --platform android --non-interactive --profile development | grep -oP '(?<=Build ID: )\S+')
-          echo "build_id=$build_id" >> $GITHUB_ENV
-          echo "Build ID: $build_id"  # This will print the build ID in the logs
+          build_json=$(eas build --platform android --non-interactive --profile development --json)
+          echo "Build JSON Output: $build_json"
 
-      - name: Wait for EAS build to finish
-        id: wait_for_build
-        run: |
-          while true; do
-            status=$(curl -s -X GET https://expo.dev/api/v2/builds/$build_id -H "Authorization: Bearer ${{ secrets.EXPO_PAT }}" | jq -r '.data.status')
-            if [[ "$status" == "finished" || "$status" == "errored" ]]; then
-              echo "Build finished with status: $status"
-              break
-            fi
-            echo "Waiting for the build to finish..."
-            sleep 30
-          done
+          android_link=$(echo "$build_json" | jq -r '.[] | select(.platform=="android") | .artifacts.applicationArchiveUrl')
+          qr_code=$(echo "$build_json" | jq -r '.[] | select(.platform=="android") | .artifacts.qrCodeUrl')
 
-      - name: Display Build Details in Workflow Summary
-        run: |
-          build_url="https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds/$build_id"
-          echo "## EAS Build Details" >> $GITHUB_ENV
-          echo "Build ID: $build_id" >> $GITHUB_ENV
-          echo "Build URL: $build_url" >> $GITHUB_ENV
+          echo "android_link=$android_link" >> $GITHUB_ENV
+          echo "qr_code=$qr_code" >> $GITHUB_ENV
 
-      - name: Show Build Details in Summary
+      - name: 📜 Publish Build Summary
         run: |
-          echo "EAS Build ID: ${{ env.build_id }}"
-          echo "EAS Build URL: ${{ env.build_url }}"
-        continue-on-error: true
+          echo "## EAS Build Summary 🚀" >> $GITHUB_STEP_SUMMARY
+          echo "- **Android Build URL**: [$android_link]($android_link)" >> $GITHUB_STEP_SUMMARY
+          echo "- **QR Code**: ![]($qr_code)" >> $GITHUB_STEP_SUMMARY
