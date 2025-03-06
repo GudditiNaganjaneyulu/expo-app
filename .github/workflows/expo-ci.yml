@@ -31,16 +31,53 @@ jobs:
         id: eas_build
         run: |
           build_json=$(eas build --platform android --non-interactive --profile development --json)
-          echo "Build JSON Output: $build_json"
+          echo "Build JSON: $build_json"
+          
+          build_id=$(echo "$build_json" | jq -r '.[0].id')
+          apk_url=$(echo "$build_json" | jq -r '.[0].artifacts.applicationArchiveUrl')
 
-          android_link=$(echo "$build_json" | jq -r '.[] | select(.platform=="android") | .artifacts.applicationArchiveUrl')
-          qr_code=$(echo "$build_json" | jq -r '.[] | select(.platform=="android") | .artifacts.qrCodeUrl')
+          build_url="https://expo.dev/accounts/gudditinaganjaneyulu/projects/expo-project/builds/$build_id"
+          qr_code_url="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=$build_url"
 
-          echo "android_link=$android_link" >> $GITHUB_ENV
-          echo "qr_code=$qr_code" >> $GITHUB_ENV
+          echo "build_id=$build_id" >> $GITHUB_ENV
+          echo "build_url=$build_url" >> $GITHUB_ENV
+          echo "apk_url=$apk_url" >> $GITHUB_ENV
+          echo "qr_code_url=$qr_code_url" >> $GITHUB_ENV
 
-      - name: 📜 Publish Build Summary
+      - name: 📜 Add Build Summary
         run: |
-          echo "## EAS Build Summary 🚀" >> $GITHUB_STEP_SUMMARY
-          echo "- **Android Build URL**: [$android_link]($android_link)" >> $GITHUB_STEP_SUMMARY
-          echo "- **QR Code**: ![]($qr_code)" >> $GITHUB_STEP_SUMMARY
+          echo "## 🚀 Build Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Build URL**: [$build_url]($build_url)" >> $GITHUB_STEP_SUMMARY
+          echo "- **Direct APK URL**: [$apk_url]($apk_url)" >> $GITHUB_STEP_SUMMARY
+          echo "- **QR Code:**" >> $GITHUB_STEP_SUMMARY
+          echo "![$build_url]($qr_code_url)" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🔔 Send Notification to Slack
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          curl -X POST -H 'Content-type: application/json' --data '{
+            "text": "🚀 *EAS Build Completed!*",
+            "attachments": [
+              {
+                "color": "#36a64f",
+                "fields": [
+                  {
+                    "title": "Build URL",
+                    "value": "'$build_url'",
+                    "short": false
+                  },
+                  {
+                    "title": "Direct APK URL",
+                    "value": "'$apk_url'",
+                    "short": false
+                  },
+                  {
+                    "title": "QR Code",
+                    "value": "'$qr_code_url'",
+                    "short": false
+                  }
+                ]
+              }
+            ]
+          }' $SLACK_WEBHOOK
