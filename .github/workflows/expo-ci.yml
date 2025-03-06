@@ -37,7 +37,7 @@ jobs:
           
           build_id=$(echo $build_json | jq -r '.id')
           apk_url=$(echo $build_json | jq -r '.artifacts.applicationArchiveUrl')
-          build_url="https://expo.dev/accounts/gudditinaganjaneyulu/projects/expo-project/builds/$build_id"
+          build_url="https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds/$build_id"
           qr_code_url="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=$build_url"
 
           echo "build_id=$build_id" >> $GITHUB_ENV
@@ -55,46 +55,21 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "_Build completed on $(date)_" >> $GITHUB_STEP_SUMMARY
 
-      - name: 🔔 Send Notification to Slack
+      - name: 🟢 Send Slack message on success
+        if: success()
         env:
           SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
         run: |
-          curl -X POST -H 'Content-type: application/json' --data '{
-            "blocks": [
-              {
-                "type": "header",
-                "text": {
-                  "type": "plain_text",
-                  "text": "🚀 EAS Build Completed! ✅",
-                  "emoji": true
+          MESSAGE="*🚀 Build Succeeded for the Project \`${{ secrets.EXPO_PROJECT_NAME }}\`!*"
+          DETAILS="🔗 *Build URL:* <$build_url|Click to View Build>\n🤖 *APK Download:* <$apk_url|Download APK>"
+
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "text": "'"$MESSAGE"'\n'"$DETAILS"'",
+              "attachments": [
+                {
+                  "text": "📷 *Scan QR Code to Access Build:*",
+                  "image_url": "'"$qr_code_url"'"
                 }
-              },
-              {
-                "type": "section",
-                "fields": [
-                  {
-                    "type": "mrkdwn",
-                    "text": "*🔗 Build URL:*\n<$build_url|Click here to view the build>"
-                  },
-                  {
-                    "type": "mrkdwn",
-                    "text": "*🤖 APK Download:*\n<$apk_url|Download APK>"
-                  }
-                ]
-              },
-              {
-                "type": "image",
-                "image_url": "$qr_code_url",
-                "alt_text": "QR Code for Build"
-              },
-              {
-                "type": "context",
-                "elements": [
-                  {
-                    "type": "mrkdwn",
-                    "text": "📅 Build completed on $(date)"
-                  }
-                ]
-              }
-            ]
-          }' $SLACK_WEBHOOK
+              ]
+            }' $SLACK_WEBHOOK
