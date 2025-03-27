@@ -17,8 +17,13 @@ jobs:
           node-version: 18.x
           cache: npm
 
-      - name: 🏰 Check max_old_space_size
-        run: node --v8-options | grep -i "max_old_space_size"
+      - name: 🏰 Install Dependencies
+        run: npm install
+
+      - name: 🏰 Check allocated heap size
+        run: |
+          node -e "console.log(v8.getHeapStatistics())"
+        shell: bash
 
 
       # - name: 🏰 Setup EAS
