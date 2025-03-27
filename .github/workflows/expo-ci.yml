@@ -16,7 +16,9 @@ jobs:
         with:
           node-version: 18.x
           cache: npm
-      - run: node --v8-options | grep -i "max_old_space_size"
+
+      - name: 🏰 Check max_old_space_size
+        run: node --v8-options | grep -i "max_old_space_size"
 
 
       # - name: 🏰 Setup EAS
