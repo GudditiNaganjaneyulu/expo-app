@@ -1,0 +1,95 @@
+name: development build - 🤖 android 
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🏷️ Setup repo
+        uses: actions/checkout@v3
+
+      - name: 🏷️ Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18.x
+          cache: npm
+
+      - name: 🏷️ Setup EAS
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: 🛆 Install dependencies
+        run: npm install
+
+      - name: 🚀 Build app
+        id: eas_build
+        run: |
+          # npm run prebuild
+
+          # mkdir -p android/app/src/Release && touch android/app/src/Release/google-services.json
+          # mkdir -p android/app/src/release && touch android/app/src/release/google-services.json
+
+          # cp android/app/google-services.json android/app/src/Release/google-services.json
+          # cp android/app/google-services.json android/app/src/release/google-services.json
+          # cp android/app/google-services.json android/app/src/debug/google-services.json
+          
+          build_json=$(eas build --platform android --non-interactive --profile development --json)
+          echo "Build JSON: $build_json"
+
+          build_id=$(echo "$build_json" | jq -r '.[0].id')
+          apk_url=$(echo "$build_json" | jq -r '.[0].artifacts.applicationArchiveUrl')
+          build_url="https://expo.dev/accounts/${{ secrets.EXPO_ACCOUNT_NAME }}/projects/${{ secrets.EXPO_PROJECT_NAME }}/builds/$build_id"
+          qr_code_url="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=$build_url"
+
+          echo "build_id=$build_id" >> $GITHUB_ENV
+          echo "apk_url=$apk_url" >> $GITHUB_ENV
+          echo "build_url=$build_url" >> $GITHUB_ENV
+          echo "qr_code_url=$qr_code_url" >> $GITHUB_ENV
+
+      - name: 📦 Publish Summary and Notify Slack
+        if: always()
+        env:
+          SLACK_WEBHOOK: ${{ secrets.SLACK_WEBHOOK }}
+        run: |
+          STATUS="${{ job.status }}"
+          EMOJI="✅"
+          TITLE="🚀 EAS Build Completed!"
+          COLOR="#2eb886"
+
+          if [ "$STATUS" != "success" ]; then
+            EMOJI="❌"
+            TITLE="📉 EAS Build Failed!"
+            COLOR="#ff0000"
+          fi
+
+          # Publish Summary
+          echo "## $TITLE $EMOJI" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**🔗 Build URL:** [Click to View Build]($build_url)" >> $GITHUB_STEP_SUMMARY
+          echo "**🤖 APK Download:** [Download APK]($apk_url)" >> $GITHUB_STEP_SUMMARY
+          echo "![QR Code]($qr_code_url)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "_Build completed on $(date)_" >> $GITHUB_STEP_SUMMARY
+
+          # Send Slack Message
+          MESSAGE="*$TITLE for the Project \`${{ secrets.EXPO_PROJECT_NAME }}\`*"
+          DETAILS="\n🔗 *Build URL:* <$build_url|Click to View Build>\n🤖 *APK Download:* <$apk_url|Download APK>"
+
+          curl -X POST -H 'Content-type: application/json' \
+            --data '{
+              "text": "'"$MESSAGE"'\n\n'"$DETAILS"'",
+              "attachments": [
+                {
+                  "color": "'"$COLOR"'",
+                  "text": "📷 *Scan QR Code to Access Build:*",
+                  "image_url": "'"$qr_code_url"'"
+                }
+              ]
+            }' $SLACK_WEBHOOK
