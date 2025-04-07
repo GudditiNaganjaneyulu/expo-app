@@ -1,0 +1,65 @@
+name: 🚧 iOS Build (PR Check)
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build-ios:
+    runs-on: macos-latest
+
+    steps:
+      - name: 🏰 Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      - name: 📦 Install Node.js Dependencies
+        run: npm install
+
+      - name: 🛠️ Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      # - name: 💎 Setup Ruby & Install CocoaPods
+      #   run: |
+      #     sudo gem install cocoapods
+      #     cd ios
+      #     pod install --repo-update
+
+      - name: 📱 Ensure iPhone 15 Simulator Exists
+        run: |
+          SIMULATOR_EXISTS=$(xcrun simctl list devices available | grep -c "iPhone 15")
+          if [ "$SIMULATOR_EXISTS" -eq "0" ]; then
+            echo "Creating iPhone 15 Simulator..."
+            xcrun simctl create "iPhone 15" com.apple.CoreSimulator.SimDeviceType.iPhone-15 com.apple.CoreSimulator.SimRuntime.iOS-17-2
+          fi
+
+      - name: 🔍 Get iPhone 15 Simulator UUID
+        id: find_simulator
+        run: |
+          SIM_UUID=$(xcrun simctl list devices available | grep 'iPhone 15' | awk -F '[()]' '{print $2}')
+          echo "SIM_UUID=${SIM_UUID}" >> $GITHUB_ENV
+          echo "The UUID of the iPhone 15 Simulator is: $SIM_UUID"  # Print the SIM_UUID
+
+      # - name: 🧪 Analyze iOS App (Simulator) - QA
+      #   run: |
+      #     cd ios
+      #     xcodebuild analyze \
+      #       -workspace GaimplanMobile.xcworkspace \
+      #       -scheme GaimplanMobile-QA \
+      #       -destination "platform=iOS Simulator,id=${{ env.SIM_UUID }}"
+
+      # Optional: Full Simulator Build
+      # - name: 🚧 Build iOS App (Simulator) - QA
+      #   run: |
+      #     cd ios
+      #     xcodebuild clean build \
+      #       -workspace GaimplanMobile.xcworkspace \
+      #       -scheme GaimplanMobile-QA \
+      #       -destination "platform=iOS Simulator,id=${{ env.SIM_UUID }}"
