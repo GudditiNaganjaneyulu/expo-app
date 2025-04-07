@@ -43,7 +43,7 @@ jobs:
       - name: 🔍 Get iPhone 15 Simulator UUID
         id: find_simulator
         run: |
-          SIM_UUID=$(xcrun simctl list devices available | grep 'iPhone 15' | awk -F '[()]' '{print $2}')
+          SIM_UUID=$(xcrun simctl list devices available | grep 'iPhone 15' | head -n 1 | awk -F '[()]' '{print $2}')
           echo "SIM_UUID=${SIM_UUID}" >> $GITHUB_ENV
           echo "The UUID of the iPhone 15 Simulator is: $SIM_UUID"  # Print the SIM_UUID
 
