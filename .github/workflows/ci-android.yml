@@ -1,9 +1,7 @@
 name: development build - 🤖 android 
 
 on:
-  push:
-    branches:
-      - main
+
   workflow_dispatch:
 
 jobs:
