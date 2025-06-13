@@ -1,0 +1,25 @@
+name: iOS Fastlane Workflow 
+
+on:
+  workflow_call:
+    inputs:
+      lane:
+        description: "Fastlane lane to run (e.g., testflight_qa, submit_appstore)"
+        required: true
+        type: string
+    # secrets:
+    #   FASTLANE_API_KEY:
+    #     required: true
+    #   MATCH_PASSWORD:
+    #     required: true
+    #   SSH_KEY:
+    #     required: true
+
+jobs:
+  ios_build:
+    name: Run Fastlane Lane - ${{ inputs.lane }}
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
